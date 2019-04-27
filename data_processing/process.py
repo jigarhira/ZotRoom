@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 from scrape import startSession, getDepartments, getDepartmentClasses
 
-MAX_CLASS_DURATION = 5
+MAX_CLASS_DURATION = 30
 
 
 def getClassData():
@@ -67,25 +67,27 @@ def writeClasses(time, room, array):
 
 # process the terrible WebSoc time data
 def processTime(time_raw):
-    time = time_raw.split('-')
-    day_split = time[0].split('\xa0')
-    dotw = day_split[0]
-    time_start = day_split[len(day_split) - 1].strip()
-    time_end = time[len(time) - 1].strip()
+    time = time_raw.split('-')                          # split the start and end time
+    day_split = time[0].split('\xa0')                   # split the days and start time
+    dotw = day_split[0].strip()                         # clean the days of the week
+    time_start = day_split[len(day_split) - 1].strip()  # clean the start time
+    time_end = time[len(time) - 1].strip()              # clean the end time
 
+    # check if the class is in pm
     pm = False
     if 'p' in time_end:
         pm = True
 
+    # convert time to decimal
     time_start = decimalTime(time_start)
     time_end = decimalTime(time_end)
 
     # military time adjustment
     if pm:
-        if time_end < 12:
-            time_end += 12
+        if time_end < 72:
+            time_end += 72
         if time_end - time_start > MAX_CLASS_DURATION:
-            time_start += 12
+            time_start += 72
 
     return {'dotw': dotw, 'time_start': time_start, 'time_end': time_end}
 
@@ -95,8 +97,11 @@ def decimalTime(time_string):
     # get the hour from the time
     hour = int(time_string.split(':')[0])
 
-    minutes = int(time_string.split(':')[1].split('p')[0])
-    time = hour + float(minutes / 60)
+    # get the minutes
+    minutes = int(time_string.split(':')[1].split('p')[0]) / 10
+
+    # combine the time
+    time = (hour * 6) + int(minutes)
 
     return time
 
@@ -128,18 +133,36 @@ def generateDepartments(html_data):
     return departments
 
 
-# creates a dictionary of used rooms at given times
-def getTimes():
-    pass
+# creates a dictionary of avalible rooms at given times
+def getTimes(data):
+    rooms = []  # list of rooms
+    data_copy = data
+
+    # add all the rooms to the list
+    for entry in data:
+        rooms.append(entry[3])
+
+    # remove duplicate rooms
+    rooms = list(dict.fromkeys(rooms))
+
+    # Create the dictionary
+    occupied = []
+    for room in rooms:                      # iterate through the rooms
+        for i in range (0, len(data_copy)): # for each room iterate through the data
+            if data[i][4] == room:          # if the room matches
+                pass
 
 
-# creates a dictionary of busy times for given rooms
+
+
+# creates a dictionary of availible times for given rooms
 def getRooms():
     pass
 
 
 def unit():
-    getClassData()
+    for entry in getClassData():
+        print(entry)
 
 if __name__ == '__main__':
     unit()
