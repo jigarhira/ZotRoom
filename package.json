@@ -4,7 +4,8 @@
   "description": "empty classroom finder for UCI",
   "main": "zotroom.js",
   "dependencies": {
-    "requests": "^0.2.2"
+    "cheerio": "^1.0.0-rc.3",
+    "request": "^2.88.0"
   },
   "devDependencies": {},
   "scripts": {
