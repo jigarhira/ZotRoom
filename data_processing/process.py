@@ -6,6 +6,7 @@
 /*************'''
 
 from bs4 import BeautifulSoup
+import numpy as np
 
 from scrape import startSession, getDepartments, getDepartmentClasses
 
@@ -136,7 +137,6 @@ def generateDepartments(html_data):
 # creates a dictionary of avalible rooms at given times
 def getTimes(data):
     rooms = []  # list of rooms
-    data_copy = data
 
     # add all the rooms to the list
     for entry in data:
@@ -146,13 +146,27 @@ def getTimes(data):
     rooms = list(dict.fromkeys(rooms))
 
     # Create the dictionary
-    occupied = []
-    for room in rooms:                      # iterate through the rooms
-        for i in range (0, len(data_copy)): # for each room iterate through the data
-            if data[i][4] == room:          # if the room matches
-                pass
+    avalibility = {rooms[i]:np.zeros((5,144), dtype=int) for i in range(0, len(rooms))}
 
+    # enter the information from the data into the dictionary
+    dotw = []   # array to store which days the class is scheduled
+    for i in range(0, len(data)):  # iterating through entries
+        if 'M' in data[i][0]: # checking for each day of the week
+            dotw.append(0)
+        if 'Tu' in data[i][0]:
+            dotw.append(1)
+        if 'W' in data[i][0]:
+            dotw.append(2)
+        if 'Th' in data[i][0]:
+            dotw.append(3)
+        if 'F' in data[i][0]:
+            dotw.append(4)
+        for day in dotw:    # iterating through each applicable day
+            for j in range(data[i][1], data[i][2]):   # iterating through all the occupied times
+                avalibility[data[i][3]][day][j] = 1   # sets the time period to 1 (booked)
+        dotw.clear()    # clears the dotw for the next entry
 
+    return avalibility
 
 
 # creates a dictionary of availible times for given rooms
@@ -161,8 +175,7 @@ def getRooms():
 
 
 def unit():
-    for entry in getClassData():
-        print(entry)
+    getTimes(getClassData())
 
 if __name__ == '__main__':
     unit()
