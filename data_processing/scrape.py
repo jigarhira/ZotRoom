@@ -10,17 +10,17 @@ import requests
 URL = 'https://www.reg.uci.edu/perl/WebSoc'
 
 # header of the post request
-http_header = {
-    'Host' : 'www.reg.uci.edu',                         # domain
-    'Origin' : 'https://www.reg.uci.edu',
-    'Referer' : 'https://www.reg.uci.edu/perl/WebSoc',  # WebSoc url
-    'Content-Type' : 'application/x-www-form-urlencoded'
+HTTP_HEADER = {
+    'Host': 'www.reg.uci.edu',  # domain
+    'Origin': 'https://www.reg.uci.edu',
+    'Referer': 'https://www.reg.uci.edu/perl/WebSoc',  # WebSoc url
+    'Content-Type': 'application/x-www-form-urlencoded'
 }
 
 # body of the POST request
-http_payload = {
+HTTP_PAYLOAD = {
     'Submit': 'Display Web Results',  # type of results
-    'YearTerm': '2019-14',  # quarter of classes
+    'YearTerm': '2019-92',  # quarter of classes
     'Breath': 'ANY',  # will not restrict to GE
     'Division': 'ANY',  # include graduate courses
     'ClassType': 'ALL',  # all classes
@@ -28,48 +28,55 @@ http_payload = {
     'CancelledCourses': 'Exclude',  # do not include cancelled classes
 }
 
+class WebSoc:
+    """
+    DOCSTRING
+    """
 
-# create a session for requests
-def startSession():
-    # creates a session so we can reuse the same TCP connection
-    session = requests.Session()
+    def __init__(self, url='', header={}, payload={}):
+        """
+        DOCSTRING
+        """
 
-    # update default session header and payload to be reused
-    session.headers.update(http_header)
+        # set the constructor attributes
+        self.url = url
+        self.header = header
+        self.payload = payload
 
-    return session
+        # creates a session so we can reuse the same TCP connection
+        self.session = requests.Session()
+
+        # update default session header and payload to be reused
+        self.session.headers.update(self.header)
+
+    def get_departments(self) -> requests.Response:
+        """
+        Requests a list of valid departments and returns the response.
+        """
+
+        # HTTP GET request
+        return self.session.get(url=self.url, headers={'Content-Type ' : 'text/html'})
+
+    def get_department_classes(self, department: str) -> requests.Response:
+        """
+        Requests the class data for a department and returns the response.
+        """
+
+        # department payload
+        http_payload_department = {'Dept': department}
+
+        # HTTP POST request with payload
+        return self.session.post(url=self.url, data=dict(self.payload, **http_payload_department))
 
 
-# get the list of departments
-def getDepartments(session):
-    # HTTP GET request
-    response = session.get(url=URL, headers={'Content-Type' : 'text/html'})
-
-    # return the response
-    return response
-
-
-# return the list of classes for a department
-def getDepartmentClasses(session, department):
-    # department payload
-    http_payload_department = {'Dept' : department}
-
-    # HTTP POST request with payload
-    response = session.post(url=URL, data=dict(http_payload, **http_payload_department))
-
-    # return the response
-    return response
-
-
-
-
-# unit test
 def unit():
-    session = startSession()
+    """
+    Unit test
+    """
 
-    print(getDepartmentClasses(session, 'EECS').text)
+    websoc = WebSoc(url=URL, header=HTTP_HEADER, payload=HTTP_PAYLOAD)
 
-
+    print(websoc.get_department_classes('EECS').text)
 
 
 if __name__ == "__main__":
