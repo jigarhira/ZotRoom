@@ -1,2 +1,6 @@
 # exclude node_modules
 /server/node_modules/*
+
+# exclude pycharm/intelliJ files
+/data_processing/__pycache__/*
+/.idea/*
