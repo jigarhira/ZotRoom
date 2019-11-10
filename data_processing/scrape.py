@@ -20,10 +20,10 @@ HTTP_HEADER = {
 # body of the POST request
 HTTP_PAYLOAD = {
     'Submit': 'Display Web Results',  # type of results
-    'YearTerm': '2019-92',  # quarter of classes
+    'YearTerm': '2020-03',  # quarter of classes
     'Breath': 'ANY',  # will not restrict to GE
     'Division': 'ANY',  # include graduate courses
-    'ClassType': 'ALL',  # all classes
+    'ClassType': 'ALL',  # classes
     'FullCourses': 'ANY',  # include full classes
     'CancelledCourses': 'Exclude',  # do not include cancelled classes
 }

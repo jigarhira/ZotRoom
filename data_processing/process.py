@@ -7,7 +7,9 @@ April 2019
 
 from typing import List
 from bs4 import BeautifulSoup
+import json
 import numpy as np
+import re
 
 import scrape
 from scrape import WebSoc
@@ -53,7 +55,7 @@ class Course:
     Object to store data for a course.
     """
 
-    def __init__(self, dotw='', time_start='', time_end='', room=''):
+    def __init__(self, dotw='', time_start=None, time_end=None, room=''):
         """
         Initialize Course object with given attributes.
         """
@@ -106,13 +108,13 @@ class CourseExtractor:
                     time_raw = course.contents[5].text  # get the raw time string
 
                     time = self.__parse_time(time_raw)  # parse the time string
-                    dotw = time
+                    dotw = time[0]
                     time_start = time[1]
                     time_end = time[2]
                     room = course.contents[6].text.strip().lower()  # parse the room string
 
                     # Add Course object to list
-                    courses.append(Course(dotw=dotw, time_start=time_start, time_end=time_end, room=room))
+                    courses.append(Course(dotw=dotw, time_start=time_start, time_end=time_end, room=str(room)))
 
         print('Found ' + str(len(courses)) + ' classes.\n')
 
@@ -163,94 +165,77 @@ class CourseExtractor:
         return time_int
 
 
-# creates a dictionary of available times for a given room
-def getTimes(data):
-    rooms = []  # list of rooms
+def generate_free_rooms(room_times: dict) -> dict:
+    """
+    Generates data structure for getting free rooms for each time.
+    """
+    # create data format
+    free_rooms = {'M': {},
+                  'Tu': {},
+                  'W': {},
+                  'Th': {},
+                  'F': {}
+                  }
+    # add empty lists for each time
+    for dotw in free_rooms:
+        for i in range(0,  144):
+            free_rooms[dotw][i] = []
 
-    # add all the rooms to the list
-    for entry in data:
-        rooms.append(entry[3])
+    # iterate through all the rooms. days, and times
+    for room in room_times:
+        for day in room_times[room]:
+            for time in room_times[room][day]:
+                # add the room to the corresponding time
+                free_rooms[day][time].append(room)
 
-    # remove duplicate rooms
-    rooms = list(dict.fromkeys(rooms))
-
-    # create the dictionary
-    avalibility = {rooms[i]: np.zeros((5, 144), dtype=int) for i in range(0, len(rooms))}
-
-    # enter the information from the data into the dictionary
-    dotw = []  # array to store which days the class is scheduled
-    for i in range(0, len(data)):  # iterating through entries
-        if 'M' in data[i][0]:  # checking for each day of the week
-            dotw.append(0)
-        if 'Tu' in data[i][0]:
-            dotw.append(1)
-        if 'W' in data[i][0]:
-            dotw.append(2)
-        if 'Th' in data[i][0]:
-            dotw.append(3)
-        if 'F' in data[i][0]:
-            dotw.append(4)
-        for day in dotw:  # iterating through each applicable day
-            for j in range(data[i][1], data[i][2]):  # iterating through all the occupied times
-                avalibility[data[i][3]][day][j] = 1  # sets the time period to 1 (booked)
-        dotw.clear()  # clears the dotw for the next entry
-
-    return avalibility
+    return free_rooms
 
 
-# creates a dictionary of availible times for given rooms
-def getRooms(data):
-    times = []  # list of the times
+def generate_room_times(course_data: CourseData) -> dict:
+    """
+    Generates data structure for getting the room availability.
+    """
+    room_time = {}
+    # iterate through all the courses
+    for course in course_data.courses:
+        # checks if room does not already have an entry
+        if course.room not in room_time:
+            # create the data format
+            room_time[course.room] = {'M': [],
+                                      'Tu': [],
+                                      'W': [],
+                                      'Th': [],
+                                      'F': []
+                                      }
+        # get the dotw for the class and iterate through
+        dotw = re.findall('[A-Z][^A-Z]*', course.dotw)
 
-    rooms = []  # list of the rooms
+        # check for Saturday or Sunday classes
+        if 'Sa' in dotw:
+            dotw.remove('Sa')
+        if 'Su' in dotw:
+            dotw.remove('Su')
 
-    # create the list of data in the following format:
-    #   list of 5 lists (days of the week)
-    #   list of 144 lists (10 minute blocks in the day)
-    #   list of strings (rooms that are full or availible at that time)
-    full = []
-    availability = []
-    for _ in range(0, 5):
-        full.append([])
-        availability.append([])
-    for day in range(0, 5):
-        for _ in range(0, 144):
-            full[day].append([])
-            availability[day].append([])
+        for day in dotw:
+            # Add class time tuple to data structure
+            room_time[course.room][day].append((course.time_start, course.time_end))
 
-    # enter the data into availability
-    dotw = []  # array to store which days the class is scheduled
-    for entry in data:  # iterates through all of the classes
+    # parse class times for each room into availability
+    # iterate through rooms and days
+    for room in room_time:
+        for day in room_time[room]:
+            # generate list of available times
+            available_time = [i for i in range(0, 144)]
+            # iterate each class tuple in each room and day
+            for class_time in room_time[room][day]:
+                for time in range(class_time[0], class_time[1]):
+                    # remove entries from available time
+                    if time in available_time:
+                        available_time.remove(time)
+            # replace old time entry
+            room_time[room][day] = available_time
 
-        if entry[3] not in rooms:  # checks to see if the room is in the room list
-            rooms.append(entry[3])  # adds room to room list
-
-        if 'M' in entry[0]:  # checking for each day of the week
-            dotw.append(0)
-        if 'Tu' in entry[0]:
-            dotw.append(1)
-        if 'W' in entry[0]:
-            dotw.append(2)
-        if 'Th' in entry[0]:
-            dotw.append(3)
-        if 'F' in entry[0]:
-            dotw.append(4)
-        for day in dotw:  # iterates through the days he class is scheduled
-            for j in range(entry[1], entry[2]):  # iterates through the times that the class is in session
-                if entry[3] not in full[day][j]:  # checks to see if the room was already added to that time
-                    full[day][j].append(entry[3])  # add the room to the time
-        dotw.clear()  # clears the dotw list
-
-        # generates the availability list from the full list
-        for day in range(0, 5):  # iterates through the days
-            for time in range(0, 144):  # iterates through the times
-                for room in rooms:  # iterates through the rooms
-                    if room not in full[day][time]:  # checks if the room from the room list was in full for that time
-                        if room not in availability[day][
-                            time]:  # checks if the room is already in the availability list
-                            availability[day][time].append(room)  # adds the room to the availability list
-
-    return availability
+    return room_time
 
 
 # process.py unit test
@@ -279,7 +264,19 @@ def unit():
         # Add courses to total course list
         course_data.add_courses(courses)
 
-    print('-----------------\n    -~DONE~-\n-----------------\nFound ' + str(len(course_data.courses)) + ' classes in total.')
+    print('-----------------\n    -~DONE~-\n-----------------\nFound ' + str(
+        len(course_data.courses)) + ' classes in total.')
+
+    # Generate room availability
+    room_times = generate_room_times(course_data)
+
+    # Generate free rooms for a given time
+    free_rooms = generate_free_rooms(room_times)
+
+    with open('room_times.json', 'w') as outfile:
+        json.dump(room_times, indent=4, fp=outfile)
+    with open('free_rooms.json', 'w') as outfile:
+        json.dump(free_rooms, indent=4, fp=outfile)
 
 
 if __name__ == '__main__':
