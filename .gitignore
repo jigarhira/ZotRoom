@@ -1,5 +1,5 @@
-# exclude node_modules
-/server/node_modules/*
+# exclude python env
+/env/*
 
 # exclude pycharm/intelliJ files
 /data_processing/__pycache__/*
