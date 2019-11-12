@@ -9,4 +9,5 @@
 /.vscode/*
 
 # exlude generated files
+/*.json
 /data_processing/*.json
