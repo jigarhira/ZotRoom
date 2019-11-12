@@ -4,3 +4,6 @@
 # exclude pycharm/intelliJ files
 /data_processing/__pycache__/*
 /.idea/*
+
+# exclude vscode files
+/.vscode/*
