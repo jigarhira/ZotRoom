@@ -7,3 +7,6 @@
 
 # exclude vscode files
 /.vscode/*
+
+# exlude generated files
+/data_processing/*.json
